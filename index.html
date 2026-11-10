@@ -160,6 +160,7 @@ textarea.field{resize:none}
 .legend i{width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #6B7691}
 .legend i.on{background:var(--accent);border-color:var(--accent)}
 .leaflet-container{font-family:inherit}
+.leaflet-tile-pane{filter:saturate(.5) brightness(1.04) contrast(.95)}   /* fond adouci : les repères restent le sujet */
 .leaflet-control-attribution{font-size:10px;background:rgba(255,255,255,.85)!important}
 
 /* ---------- fiche de visite (feuille) ---------- */
@@ -252,11 +253,13 @@ const KEY = 'carnet.visits';
 const SUPABASE_URL = 'https://suwmxryihrilmvttjibs.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_8HkW8fCsnxZqQyM261d3Gg_hTM5zK_t';   // clé publique (publishable)
 const ACC = '#1B3FD6', INK = '#0E1726', MUTED = '#6B7691', ACC_LIGHT = '#98A9ED';
-/* Fond de carte : tuiles claires CARTO (données © OpenStreetMap). Pour le fond OSM standard :
-   https://tile.openstreetmap.org/{z}/{x}/{y}.png avec subdomains non utilisés. */
-const TILE = {
-  url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-  attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+/* Fond de carte : OpenStreetMap (sans clé). Si aucune tuile ne se charge (source bloquée, hors ligne
+   côté serveur…), bascule automatiquement sur le Plan IGN, gratuit et sans clé. */
+const TILES = {
+  main:   { url:'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            attr:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' },
+  backup: { url:'https://data.geopf.fr/wmts?REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0&STYLE=normal&TILEMATRIXSET=PM&FORMAT=image/png&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}',
+            attr:'&copy; <a href="https://www.ign.fr/">IGN</a>' }
 };
 const METRO = [[41.2,-5.3],[51.3,9.8]];
 const MONTHS = ['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];
@@ -635,6 +638,16 @@ function renderPanel(){
   const f = box.querySelector('.fiche');
   if (f) f.onclick = () => visits[p.id] ? viewDetail(p.id) : openFiche(p.id);
 }
+function addBaseLayer(m){
+  const mk = t => L.tileLayer(t.url, { attribution:t.attr, maxZoom:19 });
+  const main = mk(TILES.main).addTo(m);
+  let ok = false, bad = 0, swapped = false;
+  main.on('tileload', () => { ok = true; });
+  main.on('tileerror', () => {
+    if (ok || swapped || m !== map || ++bad < 3) return;   /* rien n'a chargé : on change de source */
+    swapped = true; m.removeLayer(main); mk(TILES.backup).addTo(m);
+  });
+}
 function viewCarte(){
   const v = setView(true), doms = domGroups();
   v.innerHTML = '<div id="map"></div>' +
@@ -653,7 +666,7 @@ function viewCarte(){
   }
   map = L.map('map', { zoomControl:false, attributionControl:false, renderer:L.canvas({ tolerance:10 }), zoomSnap:.5, minZoom:3, maxZoom:18 });
   L.control.attribution({ prefix:false, position:'bottomright' }).addTo(map);
-  L.tileLayer(TILE.url, { attribution:TILE.attr, maxZoom:19, subdomains:'abcd' }).addTo(map);
+  addBaseLayer(map);
   layer = L.layerGroup().addTo(map);
   fitMetro();
   updateMarkers();
@@ -757,7 +770,8 @@ function viewReglages(){
   const rs = el('r-seed');
   if (rs) rs.onclick = () => { if (confirm('Remplacer le carnet actuel par les visites de démonstration ?')) { visits = seed(); persist(); renderCover(); render(); } };
   const sn = el('s-now'); if (sn) sn.onclick = () => sync();
-  const ss = el('s-send'); if (ss) ss.onclick = sendLink;
+  const sf = el('s-form'); if (sf) sf.onsubmit = e => { e.preventDefault(); passwordAuth(false); };
+  const su = el('s-up'); if (su) su.onclick = () => { el('s-pw').autocomplete = 'new-password'; passwordAuth(true); };
   const so = el('s-out'); if (so) so.onclick = signOut;
 }
 
@@ -862,14 +876,34 @@ async function sync(){
     if (syncAgain) { syncAgain = false; scheduleSync(300); }
   }
 }
-async function sendLink(){
-  const mail = (el('s-mail').value || '').trim();
+const AUTH_ERR = [
+  [/invalid login credentials|invalid_credentials/i, 'E-mail ou mot de passe incorrect.'],
+  [/already registered|already been registered|user_already_exists/i, 'Un compte existe déjà avec cet e-mail : utilisez « Se connecter ».'],
+  [/email not confirmed|email_not_confirmed/i, "E-mail non confirmé : ouvrez le message de confirmation reçu (ou désactivez la confirmation d'e-mail dans Supabase)."],
+  [/rate limit|too many|over_.*_rate_limit/i, 'Trop de tentatives : patientez quelques minutes.'],
+  [/password.*(short|least|weak|characters)|weak_password/i, 'Mot de passe trop court ou trop faible.'],
+  [/failed to fetch|network/i, 'Réseau indisponible : réessayez.']
+];
+const authMsg = e => { const m = (e && e.message) || ''; const f = AUTH_ERR.find(x => x[0].test(m)); return f ? f[1] : (m || 'Erreur inconnue.'); };
+async function passwordAuth(create){
+  const mail = (el('s-mail').value || '').trim(), pw = el('s-pw').value || '';
   if (!/^\S+@\S+\.\S+$/.test(mail)) { setStatus('Adresse e-mail invalide.'); return; }
-  if (location.protocol === 'file:') { setStatus("La connexion nécessite que l'app soit servie en https (par exemple GitHub Pages)."); return; }
-  const b = el('s-send'); b.disabled = true; setStatus('Envoi…');
-  const { error } = await sb.auth.signInWithOtp({ email:mail, options:{ emailRedirectTo: location.origin + location.pathname } });
-  b.disabled = false;
-  setStatus(error ? 'Envoi impossible : ' + error.message : 'Lien envoyé à ' + mail + '. Ouvrez-le sur cet appareil.');
+  if (pw.length < 8) { setStatus('Le mot de passe doit faire au moins 8 caractères.'); return; }
+  const btns = document.querySelectorAll('#s-form button'); btns.forEach(b => { b.disabled = true; });
+  setStatus(create ? 'Création du compte…' : 'Connexion…');
+  try {
+    if (create) {
+      const { data, error } = await sb.auth.signUp({ email:mail, password:pw,
+        options:{ emailRedirectTo: location.protocol === 'file:' ? undefined : location.origin + location.pathname } });
+      if (error) throw error;
+      /* sans session : la confirmation d'e-mail est activée côté Supabase */
+      if (!data.session) setStatus('Compte créé. Un e-mail de confirmation a été envoyé à ' + mail + ' : confirmez-le, puis connectez-vous.');
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email:mail, password:pw });
+      if (error) throw error;
+    }
+  } catch (e) { setStatus(authMsg(e)); }
+  btns.forEach(b => { b.disabled = false; });   /* en cas de succès, l'écran est reconstruit par onAuthStateChange */
 }
 async function signOut(){
   if (!confirm('Se déconnecter ? Le carnet reste sur cet appareil.')) return;
@@ -878,9 +912,12 @@ async function signOut(){
 }
 function syncCardHTML(){
   if (!sb) return '<div class="card"><p class="mut">Synchronisation non configurée : renseignez <b>SUPABASE_URL</b> et <b>SUPABASE_KEY</b> en haut du script (voir <b>supabase/schema.sql</b>). En attendant, le carnet reste sur cet appareil.</p></div>';
-  if (!session) return '<div class="card"><p class="mut" style="margin-bottom:12px">Retrouvez votre carnet sur tous vos appareils. Saisissez votre e-mail : vous recevrez un lien de connexion, sans mot de passe.</p>' +
-    '<input class="field" id="s-mail" type="email" inputmode="email" autocomplete="email" aria-label="Adresse e-mail" placeholder="vous@exemple.fr">' +
-    '<button type="button" class="btn" id="s-send" style="margin-top:8px">Recevoir le lien de connexion</button>' +
+  if (!session) return '<div class="card"><p class="mut" style="margin-bottom:12px">Retrouvez votre carnet sur tous vos appareils : connectez-vous, ou créez un compte avec un e-mail et un mot de passe.</p>' +
+    '<form id="s-form" novalidate>' +
+    '<input class="field" id="s-mail" type="email" inputmode="email" autocomplete="username" aria-label="Adresse e-mail" placeholder="vous@exemple.fr">' +
+    '<input class="field" id="s-pw" type="password" autocomplete="current-password" aria-label="Mot de passe" placeholder="Mot de passe (8 caractères minimum)" style="margin-top:8px">' +
+    '<button type="submit" class="btn" style="margin-top:12px">Se connecter</button>' +
+    '<button type="button" class="btn alt" id="s-up">Créer un compte</button></form>' +
     '<p class="mut" id="sync-status" style="margin-top:10px">' + esc(syncStatus) + '</p></div>';
   return '<div class="card"><p style="font-size:15px">Connecté : <b>' + esc(session.user.email || '') + '</b></p>' +
     '<p class="mut" id="sync-status" style="margin:6px 0 12px">' + esc(syncStatus || (lastOk ? 'Dernière synchro à ' + hhmm(lastOk) : '')) + '</p>' +
