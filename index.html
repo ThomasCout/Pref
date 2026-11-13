@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F3F4F7">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Préfectures">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <title>Préfectures de France — Carnet de visites</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -837,6 +844,7 @@ function viewReglages(){
   const v = setView(false), n = count(), ph = Object.values(visits).filter(x => x.photo).length;
   v.innerHTML =
     '<div class="sec" style="margin-top:4px"><span>Synchronisation</span></div>' + syncCardHTML() +
+    appCardHTML() +
     '<div class="sec"><span>Sauvegarde</span></div><div class="card">' +
     '<p class="mut" style="margin-bottom:12px">Archive <b>.carnet</b> contenant vos visites et leurs photos. ' + n + ' visite' + (n>1?'s':'') + ', ' + ph + ' photo' + (ph>1?'s':'') + '.</p>' +
     '<button type="button" class="btn alt" id="r-exp">Exporter le carnet</button>' +
@@ -859,6 +867,9 @@ function viewReglages(){
     visits = {}; persist(); renderCover(); render(); };
   const rs = el('r-seed');
   if (rs) rs.onclick = () => { if (confirm('Remplacer le carnet actuel par les visites de démonstration ?')) { visits = seed(); persist(); renderCover(); render(); } };
+  const ai = el('a-install'); if (ai) ai.onclick = () => {
+    const ev = installEvt; if (!ev) return; installEvt = null;      /* l'invite ne peut servir qu'une fois */
+    Promise.resolve(ev.prompt()).then(() => ev.userChoice).catch(() => {}).then(() => { if (state.tab === 'reglages' && !inDetail) render(); }); };
   const sn = el('s-now'); if (sn) sn.onclick = () => sync();
   const sf = el('s-form'); if (sf) sf.onsubmit = e => { e.preventDefault(); passwordAuth(false); };
   const su = el('s-up'); if (su) su.onclick = () => { el('s-pw').autocomplete = 'new-password'; passwordAuth(true); };
@@ -1276,8 +1287,29 @@ function initSync(){
   window.addEventListener('online', () => scheduleSync(500));
 }
 
+/* ----- application installable (PWA) ----- */
+let installEvt = null;
+const isStandalone = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+const refreshSettings = () => { if (state.tab === 'reglages' && !inDetail && !el('main').classList.contains('hidden')) render(); };
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; refreshSettings(); });
+window.addEventListener('appinstalled', () => { installEvt = null; refreshSettings(); });
+function appCardHTML(){
+  if (!/^https?:$/.test(location.protocol)) return '';           /* hors https : pas d'installation possible */
+  const head = '<div class="sec"><span>Application</span></div><div class="card">';
+  if (isStandalone()) return head + '<p class="mut">Le carnet est installé sur cet appareil et fonctionne en plein écran.</p></div>';
+  if (installEvt) return head + '<p class="mut" style="margin-bottom:12px">Installez le carnet sur votre écran d\'accueil : icône dédiée, plein écran, et accès même sans connexion.</p>' +
+    '<button type="button" class="btn" id="a-install">Installer l\'application</button></div>';
+  return head + '<p class="mut">Pour installer le carnet comme une application : sur Android, menu ⋮ de Chrome puis « Installer l\'application » ; ' +
+    'sur iPhone, bouton Partager de Safari puis « Sur l\'écran d\'accueil ».</p></div>';
+}
+function registerSW(){
+  if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+
 renderCover();
 initSync();
+registerSW();
 </script>
 </body>
 </html>
