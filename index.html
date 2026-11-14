@@ -552,7 +552,6 @@ function viewDetail(id, back){
   const fab = el('fab'); fab.hidden = false; fab.dataset.id = id;
   fab.innerHTML = v ? FAB_EDIT : FAB_PLUS; fab.setAttribute('aria-label', v ? 'Modifier la fiche de visite' : 'Déclarer une visite ici');
   vw.innerHTML =
-    '<div class="phero" id="phero" data-id="' + esc(id) + '"><span class="big">' + esc(p.dept) + '</span></div>' +
     '<div class="dhead"><h2>' + esc(p.nom) + '</h2>' +
     '<p class="mut">' + typeLabel(p) + ' · ' + esc(p.deptNom) + ' (' + esc(p.dept) + ') · ' + esc(p.region) +
     (p.arrondissement ? '<br>Arrondissement de ' + esc(p.arrondissement) : '') + '</p></div>' +
@@ -1105,13 +1104,14 @@ async function fillInfo(p){
   let c; try { c = await loadInfo(p); } catch(e){ c = {}; }
   const slot = alive(); if (!slot) return;          /* l'utilisateur est déjà parti ailleurs */
   slot.innerHTML = infoHTML(p, c);
-  const ph = el('phero'), ph0 = c.wiki && c.wiki.photo;
-  if (ph && ph.dataset.id === p.id && ph0) {
+  const ph0 = c.wiki && c.wiki.photo;
+  if (ph0) {                                        /* pas de photo : pas d'encart du tout */
     const img = document.createElement('img');
     img.alt = ph0.kind === 'prefecture' ? 'Hôtel de préfecture, ' + p.nom : 'Vue de ' + p.nom;
     img.onload = () => {
-      if (!ph.isConnected) return;
-      const big = ph.querySelector('.big'); if (big) big.remove();
+      if (!alive() || el('phero')) return;
+      const ph = document.createElement('div'); ph.className = 'phero'; ph.id = 'phero'; ph.dataset.id = p.id;
+      el('view').insertBefore(ph, el('view').firstChild);
       ph.appendChild(img);
       if (ph0.page) { const a = document.createElement('a'); a.className = 'cap'; a.href = ph0.page; a.target = '_blank'; a.rel = 'noopener';
         a.textContent = 'Photo : Wikipédia'; ph.appendChild(a); }
