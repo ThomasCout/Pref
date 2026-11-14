@@ -1029,7 +1029,7 @@ function startRetro(){
 }
 
 /* ----- infos publiques d'un lieu : INSEE (geo.api.gouv.fr) + photo et texte (Wikipédia) ----- */
-const INFO_KEY = 'carnet.info', INFO_TTL = 30 * 864e5, INFO_MAX = 150;
+const INFO_KEY = 'carnet.info2', INFO_TTL = 30 * 864e5, INFO_MAX = 150;
 let infoCache = load(INFO_KEY, {});
 function infoSave(){
   const ids = Object.keys(infoCache);
@@ -1048,7 +1048,7 @@ async function geoInfo(p){
   if (!d || typeof d.population !== 'number') return false;
   return { pop:d.population, km2: typeof d.surface === 'number' && d.surface > 0 ? d.surface / 100 : null };   /* surface en hectares */
 }
-const WIKI = 'https://fr.wikipedia.org/w/api.php?format=json&origin=*&action=query&redirects=1&inprop=url&prop=pageimages%7Cextracts%7Cdescription%7Cinfo&piprop=thumbnail&pithumbsize=900&exintro=1&explaintext=1&exchars=600&exlimit=5';
+const WIKI = 'https://fr.wikipedia.org/w/api.php?format=json&origin=*&action=query&redirects=1&inprop=url&prop=pageimages%7Cextracts%7Cdescription%7Cinfo%7Cpageprops&ppprop=disambiguation&piprop=thumbnail&pithumbsize=900&exintro=1&explaintext=1&exchars=600&exlimit=5';
 const wikiPages = d => d && d.query && d.query.pages ? Object.values(d.query.pages).filter(x => x && !x.missing && typeof x.title === 'string') : [];
 const imgOk = u => typeof u === 'string' && /^https:\/\/upload\.wikimedia\.org\//.test(u);
 const pageOf = x => ({
@@ -1071,8 +1071,11 @@ async function wikiInfo(p){
   const d1 = r1.status === 'fulfilled' ? r1.value : null, d2 = r2.status === 'fulfilled' ? r2.value : null;
   /* l'article de la commune : texte, et photo de secours */
   const pages = wikiPages(d1);
+  /* article de la commune : on écarte les pages d'homonymie (repérées par Wikipédia), et on ne refuse plus un article
+     sous prétexte que sa description est vide ou formulée autrement */
+  const isDisamb = x => (x.pageprops && 'disambiguation' in x.pageprops) || /homonymie/i.test(x.description || '') || /^[^\n]{0,80}(peut désigner|peut faire référence|peut renvoyer)/i.test(x.extract || '');
   const townRaw = d1 ? titles.map(t => pages.find(x => x.title === resolveTitle(d1, t)))
-    .find(x => x && x.extract && !/homonymie/i.test(x.description || '') && /commune|ville|capitale|chef-lieu|préfecture/i.test(x.description || '')) : null;
+    .find(x => x && x.extract && !isDisamb(x) && (!x.description || /commune|ville|capitale|chef-lieu|préfecture|communauté|municipalité/i.test(x.description))) : null;
   /* l'hôtel de préfecture : on n'accepte qu'un article dont le titre le dit, pour le bon département */
   const nn = norm(p.nom), nd = norm(p.deptNom);
   const bldRaw = d2 ? wikiPages(d2).sort((a, b) => (a.index || 0) - (b.index || 0)).find(x => {
