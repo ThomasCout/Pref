@@ -193,6 +193,26 @@ textarea.field{resize:none}
 .cta.play[disabled]{background:var(--chip);border-color:var(--line);color:var(--ink2)}
 .cta.play[disabled] .ic{background:#fff;color:var(--ink2)}
 .cta.play[disabled] .mut{color:var(--ink2)}
+/* amis */
+.dot{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--danger);color:#fff;font:700 11px/18px Inter,sans-serif;text-align:center;font-style:normal}
+.dot[hidden]{display:none}
+.code{margin-top:4px;font:700 28px 'Space Grotesk',sans-serif;letter-spacing:.12em;color:var(--accent);user-select:all}
+.am-row{display:flex;gap:8px;margin-top:12px}.am-row .btn{margin:0;flex:1;min-height:44px}
+.am-req{align-items:center}.am-btns{display:flex;gap:8px}
+.am-req .chip{border:0;min-height:38px;padding:0 14px;font-size:13px;font-weight:600}
+.rk{display:flex;align-items:center;gap:12px;width:100%;padding:12px;margin-bottom:8px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:16px}
+button.rk:active{background:#F8F9FB}
+.rk.me{background:var(--soft);border-color:transparent}
+.rk-n{flex:0 0 28px;text-align:center;font:700 18px 'Space Grotesk',sans-serif;color:var(--ink2)}
+.rk-n.top{color:var(--accent)}
+.rk-b{flex:1;min-width:0}
+.rk-b h3{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rk-b .bar{height:5px;margin-top:7px}
+.rk-c{text-align:right;font:700 20px 'Space Grotesk',sans-serif}
+.rk-c small{display:block;font:500 11px Inter,sans-serif;color:var(--ink2)}
+.alb-ph.wait{aspect-ratio:16/10;height:auto}
+.am-vis{cursor:default}
+
 
 /* ---------- rétrospective (diaporama plein écran) ---------- */
 #retro{position:absolute;inset:0;z-index:60;background:#0E1726;color:#fff;overflow:hidden;user-select:none;-webkit-user-select:none}
@@ -377,7 +397,8 @@ const I = {
   checkBig: svg('<path d="m5 12.5 4.5 4.5L19 7"/>', 40).replace('stroke-width="1.8"', 'stroke-width="2.4"'),
   back: svg('<path d="m15 6-6 6 6 6"/>', 18),
   pin: svg('<path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>', 20),
-  circle: svg('<circle cx="12" cy="12" r="7"/>', 22)
+  circle: svg('<circle cx="12" cy="12" r="7"/>', 22),
+  users: svg('<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M16.5 14.2c2.6.3 4.5 2.4 4.5 5.1"/>', 18)
 };
 
 function ring(pct, size, stroke, track, color){
@@ -465,6 +486,11 @@ function render(){
   el('h-title').textContent = TITLES[state.tab];
   const act = el('h-act');
   if (state.tab === 'registre') { act.hidden = false; act.innerHTML = I.sort + '<span>Trier</span>'; act.onclick = cycleSort; }
+  else if (state.tab === 'dossier') {
+    act.hidden = false; act.onclick = () => viewAmis();
+    act.innerHTML = I.users + '<span>Amis</span><i class="dot" id="h-dot"' + (friendBadge ? '' : ' hidden') + '>' + friendBadge + '</i>';
+    refreshFriendBadge();
+  }
   else { act.hidden = true; act.onclick = null; }
   el('fab').hidden = state.tab !== 'registre';
   ({ registre:viewRegistre, carte:viewCarte, dossier:viewDossier, reglages:viewReglages })[state.tab]();
@@ -493,8 +519,8 @@ function ficheHTML(p){
     (v ? '<span class="chip on">' + I.check + shortDate(v.date) + '</span>' : '<span class="chip">À voir</span>') +
     '</button>';
 }
-function heroHTML(){
-  const n = count(), g = gradeOf(n), nx = nextGrade(n);
+function heroHTML(n = count()){
+  const g = gradeOf(n), nx = nextGrade(n);
   const prog = nx ? (g ? (n - g[2]) / (nx[2] - g[2]) : n / nx[2]) : 1;
   return '<div class="hero"><div class="hero-ring">' + ring(n / TOTAL, 76, 7, 'rgba(255,255,255,.14)', ACC_LIGHT) +
     '<b>' + Math.round(n / TOTAL * 100) + ' %</b></div>' +
@@ -1297,6 +1323,218 @@ function initSync(){
   });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleSync(500); });
   window.addEventListener('online', () => scheduleSync(500));
+}
+
+/* ----- amis : pseudo + code, demandes à accepter, classement, carnet d'un ami en lecture seule ----- */
+let amisTok = 0, friendBadge = 0, amisFlash = '', photoQueue = [], photoBusy = 0;
+const FRIEND_ERR = [
+  [/non_connecte/, 'Connectez-vous pour utiliser les amis.'],
+  [/pseudo_invalide/, 'Pseudo invalide : 2 à 20 caractères (lettres, chiffres, espaces, - _ .).'],
+  [/pseudo_pris/, 'Ce pseudo est déjà pris : choisissez-en un autre.'],
+  [/profil_requis/, "Choisissez d'abord un pseudo."],
+  [/code_inconnu/, 'Aucun ami ne correspond à ce code.'],
+  [/soi_meme/, "C'est votre propre code !"],
+  [/non_ami/, "Cette personne n'est pas (ou plus) dans vos amis."],
+  [/could not find the function|PGRST202|schema cache|does not exist/i, "La base n'est pas encore prête pour les amis : exécutez le fichier supabase/amis.sql dans Supabase (SQL Editor)."],
+  [/failed to fetch|network|load failed|abort/i, 'Réseau indisponible : réessayez.']
+];
+const friendMsg = e => { const m = (e && (e.message || e.details)) || ''; const f = FRIEND_ERR.find(x => x[0].test(m)); return f ? f[1] : (m || 'Erreur inconnue.'); };
+async function rpc(name, args){ const r = await sb.rpc(name, args || {}); if (r.error) throw r.error; return r.data; }
+const fmtCode = c => c ? c.slice(0, 4) + '-' + c.slice(4) : '';
+const PHOTO_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+const placeById = id => PLACES.find(p => p.id === id);
+
+async function refreshFriendBadge(){
+  if (!sb || !session) { friendBadge = 0; return; }
+  try {
+    const r = await rpc('friend_requests'); friendBadge = r.filter(x => x.direction === 'in').length;
+  } catch (e) { return; }
+  const b = el('h-dot'); if (b) { b.textContent = friendBadge; b.hidden = !friendBadge; }
+}
+function backTo(fn){
+  const act = el('h-act'); act.hidden = false; act.innerHTML = I.back + '<span>Retour</span>'; act.onclick = () => { amisTok++; fn(); };
+}
+function errCard(msg, retryId){
+  return '<div class="card empty"><b>Impossible de charger</b><p class="mut">' + esc(msg) + '</p><button type="button" class="btn" id="' + retryId + '">Réessayer</button></div>';
+}
+/* rang « à égalité » : deux amis avec le même nombre de lieux partagent la même place */
+function rankOf(list){ let r = 0; return list.map((x, i) => { if (i === 0 || x.n !== list[i - 1].n) r = i + 1; return r; }); }
+
+async function viewAmis(){
+  inDetail = true; const tok = ++amisTok;
+  const v = setView(false);
+  el('h-brand').textContent = 'Mon carnet de visites'; el('h-title').textContent = 'Amis';
+  backTo(render); el('fab').hidden = true;
+  if (!sb) { v.innerHTML = '<div class="card empty"><b>Amis indisponibles</b><p class="mut">La synchronisation n\'est pas configurée : les amis ont besoin d\'un compte (voir supabase/schema.sql et supabase/amis.sql).</p></div>'; return; }
+  if (!session) {
+    v.innerHTML = '<div class="card empty"><b>Connexion nécessaire</b><p class="mut">Pour ajouter des amis et comparer vos carnets, connectez-vous d\'abord à votre compte.</p><button type="button" class="btn" id="am-login">Aller aux Réglages</button></div>';
+    el('am-login').onclick = () => { amisTok++; state.tab = 'reglages'; render(); };
+    return;
+  }
+  v.innerHTML = '<p class="mut" style="margin-top:12px">Chargement…</p>';
+  let prof, over, reqs;
+  try { [prof, over, reqs] = await Promise.all([rpc('my_profile'), rpc('friends_overview'), rpc('friend_requests')]); }
+  catch (e) { if (tok !== amisTok) return; v.innerHTML = errCard(friendMsg(e), 'am-retry'); el('am-retry').onclick = () => viewAmis(); return; }
+  if (tok !== amisTok) return;
+  friendBadge = reqs.filter(x => x.direction === 'in').length;
+  if (!prof) { drawPseudoForm(v); return; }
+  drawAmis(v, prof, over, reqs);
+}
+
+function drawPseudoForm(v){
+  v.innerHTML = '<div class="card"><b style="font:700 18px \'Space Grotesk\',sans-serif">Choisissez votre pseudo</b>' +
+    '<p class="mut" style="margin:6px 0 12px">Il sera visible de vos amis, avec votre progression. Votre e-mail reste privé.</p>' +
+    '<form id="am-ps" novalidate><input class="field" id="am-pseudo" maxlength="20" autocomplete="nickname" aria-label="Pseudo" placeholder="Pseudo (2 à 20 caractères)">' +
+    '<button type="submit" class="btn" style="margin-top:10px">Continuer</button></form>' +
+    '<p class="mut" id="am-msg" style="margin-top:8px"></p></div>';
+  el('am-ps').onsubmit = async e => {
+    e.preventDefault();
+    const val = el('am-pseudo').value.trim().replace(/\s+/g, ' ');
+    if (!/^[\p{L}\p{N} _.-]{2,20}$/u.test(val)) { el('am-msg').textContent = friendMsg({ message:'pseudo_invalide' }); return; }
+    const b = el('am-ps').querySelector('button'); b.disabled = true;
+    try { await rpc('set_profile', { p_pseudo:val }); viewAmis(); }
+    catch (err) { el('am-msg').textContent = friendMsg(err); b.disabled = false; }
+  };
+}
+
+function drawAmis(v, prof, over, reqs){
+  over = over.slice();
+  const mine = Object.values(visits).filter(isReal).length;            /* ce que verront vos amis une fois synchronisé */
+  over.forEach(x => { if (x.is_me) x.n = mine; });
+  over.sort((a, b) => b.n - a.n || (b.is_me ? 1 : 0) - (a.is_me ? 1 : 0) || a.pseudo.localeCompare(b.pseudo, 'fr'));
+  const ranks = rankOf(over), inc = reqs.filter(x => x.direction === 'in'), out = reqs.filter(x => x.direction === 'out');
+  const canShare = !!navigator.share;
+  const codeH = '<div class="card" style="margin-top:12px"><p class="mut" style="font-weight:600">Mon code ami</p>' +
+    '<div class="code" id="am-mycode">' + esc(fmtCode(prof.code)) + '</div>' +
+    '<p class="mut" style="margin-top:4px">Pseudo : <b>' + esc(prof.pseudo) + '</b>. Donnez ce code à vos amis pour qu\'ils vous ajoutent.</p>' +
+    '<div class="am-row"><button type="button" class="btn alt" id="am-copy">Copier</button>' +
+    (canShare ? '<button type="button" class="btn alt" id="am-share">Partager</button>' : '') +
+    '<button type="button" class="btn alt" id="am-rename">Pseudo</button></div></div>';
+  const addH = '<div class="sec"><span>Ajouter un ami</span></div>' +
+    '<form class="card" id="am-add" novalidate><input class="field" id="am-code" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code ami" placeholder="Code ami (ex. K7M2-QX9P)">' +
+    '<button type="submit" class="btn" style="margin-top:10px">Envoyer la demande</button>' +
+    '<p class="mut" id="am-msg" style="margin-top:8px">' + esc(amisFlash) + '</p></form>';
+  amisFlash = '';
+  let h = ''; if (inc.length) h += '<div class="sec"><span>Demandes reçues</span><span>' + inc.length + '</span></div><div class="card">' +
+    inc.map(r => '<div class="line am-req"><b>' + esc(r.pseudo) + '</b><span class="am-btns">' +
+      '<button type="button" class="chip on am-yes" data-id="' + esc(r.id) + '">Accepter</button>' +
+      '<button type="button" class="chip am-no" data-id="' + esc(r.id) + '">Refuser</button></span></div>').join('') + '</div>';
+  h += '<div class="sec"><span>Classement</span><span>sur ' + TOTAL + ' lieux</span></div>';
+  h += over.map((x, i) => {
+    const g = gradeOf(x.n);
+    const body = '<span class="rk-n' + (ranks[i] <= 3 ? ' top' : '') + '">' + ranks[i] + '</span>' +
+      '<span class="rk-b"><h3>' + esc(x.pseudo) + (x.is_me ? ' <span class="mut">(vous)</span>' : '') + '</h3>' +
+      '<p class="mut">' + esc(g ? g[1] : 'Carnet vierge') + '</p>' +
+      '<div class="bar"><i style="width:' + (x.n ? Math.max(3, x.n / TOTAL * 100).toFixed(0) : 0) + '%"></i></div></span>' +
+      '<span class="rk-c">' + x.n + '<small>/ ' + TOTAL + '</small></span>';
+    return x.is_me ? '<div class="rk me">' + body + '</div>' : '<button type="button" class="rk" data-uid="' + esc(x.user_id) + '" data-n="' + x.n + '">' + body + '</button>';
+  }).join('');
+  if (over.length === 1) h += '<div class="card empty" style="margin-top:6px"><b>Pas encore d\'ami</b><p class="mut" style="margin-bottom:0">Partagez votre code, ou saisissez celui d\'un ami ci-dessus.</p></div>';
+  h += addH + codeH;
+  if (out.length) h += '<div class="sec"><span>Demandes envoyées</span><span>' + out.length + '</span></div><div class="card">' +
+    out.map(r => '<div class="line am-req"><span><b>' + esc(r.pseudo) + '</b> <span class="mut">· en attente</span></span>' +
+      '<button type="button" class="chip am-cancel" data-uid="' + esc(r.user_id) + '">Annuler</button></div>').join('') + '</div>';
+  v.innerHTML = h;
+
+  const code = prof.code, copyTxt = fmtCode(code);
+  el('am-copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(copyTxt); el('am-copy').textContent = 'Copié ✓'; setTimeout(() => { const b = el('am-copy'); if (b) b.textContent = 'Copier'; }, 1800); }
+    catch (e) { prompt('Copiez votre code ami :', copyTxt); }
+  };
+  const sh = el('am-share'); if (sh) sh.onclick = () => navigator.share({ title:'Mon code ami',
+    text:'Ajoute-moi sur le carnet des préfectures avec le code ' + copyTxt + ' (pseudo : ' + prof.pseudo + ')' + (/^https?:$/.test(location.protocol) ? ' ' + location.origin + location.pathname : '') }).catch(() => {});
+  el('am-rename').onclick = async () => {
+    const nv = (prompt('Nouveau pseudo (2 à 20 caractères) :', prof.pseudo) || '').trim().replace(/\s+/g, ' ');
+    if (!nv || nv === prof.pseudo) return;
+    try { await rpc('set_profile', { p_pseudo:nv }); amisFlash = 'Pseudo modifié.'; viewAmis(); } catch (e) { alert(friendMsg(e)); }
+  };
+  el('am-add').onsubmit = async e => {
+    e.preventDefault();
+    const raw = el('am-code').value.toUpperCase().replace(/[^A-Z0-9]/g, ''), msg = el('am-msg'), b = el('am-add').querySelector('button');
+    if (raw.length !== 8) { msg.textContent = 'Le code ami comporte 8 caractères (ex. K7M2-QX9P).'; return; }
+    b.disabled = true; msg.textContent = 'Envoi…';
+    try {
+      const r = await rpc('request_friend', { p_code:raw });
+      amisFlash = ({ envoyee:'Demande envoyée à ' + r.pseudo + ' : elle apparaîtra dans votre classement dès qu\'elle sera acceptée.',
+        accepte:r.pseudo + ' est maintenant votre ami.', deja_ami:r.pseudo + ' est déjà votre ami.', deja_envoyee:'Demande déjà envoyée à ' + r.pseudo + '.' })[r.result] || 'Fait.';
+      viewAmis();
+    } catch (err) { msg.textContent = friendMsg(err); b.disabled = false; }
+  };
+  v.onclick = async e => {
+    const rk = e.target.closest('.rk[data-uid]'); if (rk) { viewAmi(rk.dataset.uid); return; }
+    const y = e.target.closest('.am-yes, .am-no'), c = e.target.closest('.am-cancel');
+    if (!y && !c) return;
+    e.target.closest('button').disabled = true;
+    try {
+      if (y) { const ok = y.classList.contains('am-yes'); await rpc('respond_friend', { p_id:y.dataset.id, p_accept:ok }); amisFlash = ok ? 'Ami ajouté.' : 'Demande refusée.'; }
+      else { await rpc('remove_friend', { p_user:c.dataset.uid }); amisFlash = 'Demande annulée.'; }
+      viewAmis();
+    } catch (err) { alert(friendMsg(err)); viewAmis(); }
+  };
+}
+
+/* photos d'un ami : chargées une à une, au fur et à mesure du défilement (elles sont lourdes) */
+function pumpPhotos(){
+  while (photoBusy < 2 && photoQueue.length) {
+    const job = photoQueue.shift(); photoBusy++;
+    job().catch(() => {}).finally(() => { photoBusy--; pumpPhotos(); });
+  }
+}
+function lazyPhoto(box, tok, uid, placeId){
+  const load = () => { photoQueue.push(async () => {
+    if (tok !== amisTok || !box.isConnected) return;
+    const p = await rpc('friend_photo', { p_friend:uid, p_place:placeId });
+    if (tok !== amisTok || !box.isConnected || typeof p !== 'string' || !PHOTO_RE.test(p) || p.length > 600000) return;
+    const img = new Image(); img.alt = box.dataset.alt || ''; img.src = p;
+    box.classList.remove('none'); box.innerHTML = ''; box.appendChild(img);
+  }); pumpPhotos(); };
+  if (!('IntersectionObserver' in window)) { load(); return; }
+  const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { io.disconnect(); load(); } }, { root:el('view'), rootMargin:'300px' });
+  io.observe(box);
+}
+
+async function viewAmi(uid){
+  inDetail = true; const tok = ++amisTok; photoQueue = [];
+  const v = setView(false);
+  el('h-brand').textContent = 'Carnet d\'un ami'; el('h-title').textContent = 'Ami';
+  backTo(viewAmis); el('fab').hidden = true;
+  v.innerHTML = '<p class="mut" style="margin-top:12px">Chargement…</p>';
+  let rows, over;
+  try { [rows, over] = await Promise.all([rpc('friend_visits', { p_friend:uid }), rpc('friends_overview')]); }
+  catch (e) { if (tok !== amisTok) return; v.innerHTML = errCard(friendMsg(e), 'am-retry'); el('am-retry').onclick = () => viewAmi(uid); return; }
+  if (tok !== amisTok) return;
+  const who = over.find(x => x.user_id === uid);
+  if (!who) { v.innerHTML = '<div class="card empty"><b>Ami introuvable</b><p class="mut">Cette personne n\'est plus dans vos amis.</p></div>'; return; }
+  el('h-title').textContent = who.pseudo;
+  const fv = rows.map(r => ({ p:placeById(r.place_id), date:r.date, note:r.note || '', photo:!!r.has_photo })).filter(x => x.p && /^\d{4}-\d{2}-\d{2}$/.test(x.date));
+  const n = fv.length, pref = PLACES.filter(p => p.type === 'prefecture'), sous = PLACES.filter(p => p.type === 'sous_pref');
+  const seen = new Set(fv.map(x => x.p.id)), vp = pref.filter(p => seen.has(p.id)).length, vs = sous.filter(p => seen.has(p.id)).length;
+  const common = fv.filter(x => visits[x.p.id]).length, pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+  fv.sort((a, b) => b.date.localeCompare(a.date) || a.p.nom.localeCompare(b.p.nom, 'fr'));
+  let h = heroHTML(n) +
+    '<div class="kpis"><div class="kpi"><b style="color:var(--accent)">' + n + '</b><span>Visitées</span></div>' +
+    '<div class="kpi"><b>' + (TOTAL - n) + '</b><span>Restantes</span></div></div>' +
+    '<div class="card" style="margin-top:12px"><div style="display:flex;justify-content:space-between;font-size:14px"><span>Préfectures</span><b>' + vp + '/' + pref.length + '</b></div>' +
+    '<div class="bar"><i style="width:' + pct(vp, pref.length) + '%"></i></div>' +
+    '<div style="display:flex;justify-content:space-between;font-size:14px;margin-top:14px"><span>Sous-préfectures</span><b>' + vs + '/' + sous.length + '</b></div>' +
+    '<div class="bar"><i style="width:' + pct(vs, sous.length) + '%"></i></div>' +
+    (count() ? '<p class="mut" style="margin-top:12px">' + plural(common, 'lieu', 'lieux') + ' en commun avec votre carnet.</p>' : '') + '</div>';
+  h += '<div class="sec"><span>Ses visites</span><span>du plus récent au plus ancien</span></div>';
+  if (!n) h += '<div class="card empty"><b>Carnet vide</b><p class="mut" style="margin-bottom:0">' + esc(who.pseudo) + ' n\'a pas encore enregistré de visite.</p></div>';
+  h += fv.map(x => '<div class="alb am-vis" data-id="' + esc(x.p.id) + '"><div class="alb-ph none" data-alb="' + (x.photo ? '1' : '') + '" data-alt="' + esc('Photo de ' + who.pseudo + ' : ' + x.p.nom) + '"><span class="alb-ph0">' + esc(x.p.dept) + '</span></div>' +
+    '<div class="alb-b"><div class="alb-h"><h3>' + esc(x.p.nom) + '</h3><span class="chip on">' + I.check + shortDate(x.date) + '</span></div>' +
+    '<p class="mut">' + typeLabel(x.p) + ' · ' + esc(x.p.deptNom) + '</p>' +
+    (x.note ? '<p class="alb-n" style="-webkit-line-clamp:unset">' + esc(x.note) + '</p>' : '') + '</div></div>').join('');
+  h += '<button type="button" class="btn warn" id="am-rm" style="margin-top:18px">Retirer cet ami</button>';
+  v.innerHTML = h;
+  v.querySelectorAll('.alb-ph[data-alb="1"]').forEach(b => {
+    b.classList.add('wait');                                    /* grande vignette en attendant la photo, pas de saut de page */
+    lazyPhoto(b, tok, uid, b.closest('.am-vis').dataset.id);
+  });
+  el('am-rm').onclick = async () => {
+    if (!confirm('Retirer ' + who.pseudo + ' de vos amis ? Vous ne verrez plus son carnet et il ne verra plus le vôtre.')) return;
+    try { await rpc('remove_friend', { p_user:uid }); amisFlash = who.pseudo + ' a été retiré de vos amis.'; viewAmis(); } catch (e) { alert(friendMsg(e)); }
+  };
 }
 
 /* ----- application installable (PWA) ----- */
