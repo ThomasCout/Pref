@@ -442,7 +442,10 @@ el('cover').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preve
 document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
   state.tab = b.dataset.tab; if (state.tab !== 'carte') state.pin = null; render();
 });
-el('fab').onclick = () => openFiche(null);
+const FAB_PLUS = el('fab').innerHTML, FAB_EDIT = '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/></svg>';
+/* le bouton rond sert deux fois : nouvelle visite (registre) ou déclarer / modifier le lieu affiché (fiche) */
+el('fab').onclick = () => openFiche(el('fab').dataset.id || null);
+function resetFab(){ const f = el('fab'); delete f.dataset.id; f.innerHTML = FAB_PLUS; f.setAttribute('aria-label', 'Déclarer une visite'); }
 function syncNav(){
   document.querySelectorAll('nav button').forEach(x => {
     const on = x.dataset.tab === state.tab;
@@ -456,7 +459,7 @@ function setView(mapMode){
   const v = el('view'); v.classList.toggle('map-mode', !!mapMode); v.scrollTop = 0; return v;
 }
 function render(){
-  inDetail = false;
+  inDetail = false; resetFab();
   syncNav();
   el('h-brand').textContent = 'Préfectures de France';
   el('h-title').textContent = TITLES[state.tab];
@@ -536,7 +539,7 @@ function viewRegistre(){
     v.querySelectorAll('.seg button').forEach(x => x.classList.toggle('on', x === b));
     renderList(); });
   el('list').onclick = e => { const f = e.target.closest('.fiche'); if (!f) return;
-    const id = f.dataset.id; visits[id] ? viewDetail(id) : openFiche(id); };
+    const id = f.dataset.id; viewDetail(id); };
 }
 
 /* ----- détail ----- */
@@ -546,7 +549,8 @@ function viewDetail(id, back){
   el('h-brand').textContent = 'Préfectures de France';
   el('h-title').textContent = 'Fiche';
   const act = el('h-act'); act.hidden = false; act.innerHTML = I.back + '<span>Retour</span>'; act.onclick = back || (() => render());
-  el('fab').hidden = true;
+  const fab = el('fab'); fab.hidden = false; fab.dataset.id = id;
+  fab.innerHTML = v ? FAB_EDIT : FAB_PLUS; fab.setAttribute('aria-label', v ? 'Modifier la fiche de visite' : 'Déclarer une visite ici');
   vw.innerHTML =
     '<div class="phero" id="phero" data-id="' + esc(id) + '"><span class="big">' + esc(p.dept) + '</span></div>' +
     '<div class="dhead"><h2>' + esc(p.nom) + '</h2>' +
@@ -554,18 +558,16 @@ function viewDetail(id, back){
     (p.arrondissement ? '<br>Arrondissement de ' + esc(p.arrondissement) : '') + '</p></div>' +
     '<div class="dstat ' + (v ? '' : 'todo') + '"><span class="ic">' + (v ? I.check.replace('width="14" height="14"','width="22" height="22"') : I.circle) + '</span>' +
       '<div><b>' + (v ? 'Vue le ' + longDate(v.date) : 'Pas encore visitée') + '</b>' +
-      '<span class="mut">' + (v ? 'Enregistrée dans votre carnet' : 'À déclarer lors de votre prochaine visite') + '</span></div></div>' +
+      '<span class="mut">' + (v ? 'Enregistrée dans votre carnet' : 'Touchez le bouton + pour la déclarer') + '</span></div></div>' +
     (v && v.photo ? '<img class="dphoto" src="' + v.photo + '" alt="Photo de la visite">' : '') +
     (v && v.note ? '<div class="sec"><span>Observations</span></div><p class="note">' + esc(v.note) + '</p>' : '') +
     '<div id="info-slot" data-id="' + esc(id) + '"><p class="mut" style="margin-top:16px">Chargement des informations…</p></div>' +
     '<div class="sec"><span>Adresse officielle</span></div>' +
     '<div class="card"><p style="font-size:15px">' + (esc(p.adresse) || '<span class="mut">non renseignée</span>') + '<br>' + esc(p.codePostal) + ' ' + esc(p.nom) + '</p>' +
     '<p class="mut" style="margin-top:8px">Coordonnées ' + p.lat + ', ' + p.lng + ' · INSEE ' + esc(p.codeInsee) + '</p></div>' +
-    '<div style="margin-top:16px">' +
+    '<div style="margin:16px 0 72px">' +
     '<a class="btn alt" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=' + p.lat + '&mlon=' + p.lng + '#map=17/' + p.lat + '/' + p.lng + '">Ouvrir dans un plan</a>' +
-    '<button type="button" class="btn" id="d-edit">' + (v ? 'Modifier la fiche' : 'Déclarer une visite') + '</button>' +
     (v ? '<button type="button" class="btn warn" id="d-del">Retirer du registre</button>' : '') + '</div>';
-  el('d-edit').onclick = () => openFiche(id);
   const del = el('d-del'); if (del) del.onclick = () => removeVisit(id);
   fillInfo(p);
 }
@@ -731,7 +733,7 @@ function renderPanel(){
   box.innerHTML = (p ? ficheHTML(p) : '<div class="hint">Touchez un repère pour ouvrir sa fiche.</div>') +
     '<div class="legend"><span><i class="on"></i>Visitée</span><span><i></i>À voir</span></div>';
   const f = box.querySelector('.fiche');
-  if (f) f.onclick = () => visits[p.id] ? viewDetail(p.id) : openFiche(p.id);
+  if (f) f.onclick = () => viewDetail(p.id);
 }
 function addBaseLayer(m){
   const mk = t => L.tileLayer(t.url, { attribution:t.attr, maxZoom:19 });
