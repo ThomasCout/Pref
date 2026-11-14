@@ -1037,7 +1037,8 @@ function infoSave(){
   save(INFO_KEY, infoCache);
 }
 async function getJSON(url){
-  const r = await fetch(url);
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);   /* jamais de chargement sans fin */
+  let r; try { r = await fetch(url, { signal:ctl.signal }); } finally { clearTimeout(timer); }
   if (r.status === 404) return false;               /* réponse définitive : on ne réessaie pas */
   if (!r.ok) throw new Error('HTTP ' + r.status);   /* erreur passagère : on réessaiera */
   return r.json();
@@ -1061,10 +1062,13 @@ function resolveTitle(d, t){
 async function wikiInfo(p){
   const titles = [p.nom, p.nom + ' (' + p.deptNom + ')', p.nom + ' (commune)'];
   const q = p.type === 'prefecture' ? 'hôtel de préfecture ' + p.deptNom : 'sous-préfecture ' + p.nom;
-  const [d1, d2] = await Promise.all([
+  /* deux requêtes indépendantes : si l'une échoue, l'autre sert quand même */
+  const [r1, r2] = await Promise.allSettled([
     getJSON(WIKI + '&titles=' + encodeURIComponent(titles.join('|'))),
     getJSON(WIKI + '&generator=search&gsrlimit=5&gsrnamespace=0&gsrsearch=' + encodeURIComponent(q))
   ]);
+  if (r1.status === 'rejected' && r2.status === 'rejected') throw r1.reason;
+  const d1 = r1.status === 'fulfilled' ? r1.value : null, d2 = r2.status === 'fulfilled' ? r2.value : null;
   /* l'article de la commune : texte, et photo de secours */
   const pages = wikiPages(d1);
   const townRaw = d1 ? titles.map(t => pages.find(x => x.title === resolveTitle(d1, t)))
@@ -1096,7 +1100,7 @@ function infoHTML(p, c){
   if (w && w.text) h += '<div class="sec"><span>À propos</span></div><p class="about">' + esc(w.text) + '</p>' +
     (w.page ? '<p class="about-credit"><a href="' + esc(w.page) + '" target="_blank" rel="noopener">Lire la suite sur Wikipédia</a></p>' : '');
   if (!g && !(w && w.text)) h = '<p class="mut" style="margin-top:16px">Informations indisponibles pour le moment' +
-    (navigator.onLine === false ? ' (hors connexion)' : '') + '.</p>';
+    (navigator.onLine === false ? ' (hors connexion)' : '') + '.</p><button type="button" class="btn alt" id="i-retry">Réessayer</button>';
   return h;
 }
 async function fillInfo(p){
@@ -1104,6 +1108,8 @@ async function fillInfo(p){
   let c; try { c = await loadInfo(p); } catch(e){ c = {}; }
   const slot = alive(); if (!slot) return;          /* l'utilisateur est déjà parti ailleurs */
   slot.innerHTML = infoHTML(p, c);
+  const rt = el('i-retry');
+  if (rt) rt.onclick = () => { delete infoCache[p.id]; slot.innerHTML = '<p class="mut" style="margin-top:16px">Chargement des informations…</p>'; fillInfo(p); };
   const ph0 = c.wiki && c.wiki.photo;
   if (ph0) {                                        /* pas de photo : pas d'encart du tout */
     const img = document.createElement('img');
