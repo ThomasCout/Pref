@@ -1029,7 +1029,7 @@ function startRetro(){
 }
 
 /* ----- infos publiques d'un lieu : INSEE (geo.api.gouv.fr) + photo et texte (Wikipédia) ----- */
-const INFO_KEY = 'carnet.info2', INFO_TTL = 30 * 864e5, INFO_MAX = 150;
+const INFO_KEY = 'carnet.info3', INFO_TTL = 30 * 864e5, INFO_MAX = 150;
 let infoCache = load(INFO_KEY, {});
 function infoSave(){
   const ids = Object.keys(infoCache);
@@ -1050,7 +1050,8 @@ async function geoInfo(p){
 }
 const WIKI = 'https://fr.wikipedia.org/w/api.php?format=json&origin=*&action=query&redirects=1&inprop=url&prop=pageimages%7Cextracts%7Cdescription%7Cinfo%7Cpageprops&ppprop=disambiguation&piprop=thumbnail&pithumbsize=900&exintro=1&explaintext=1&exchars=600&exlimit=5';
 const wikiPages = d => d && d.query && d.query.pages ? Object.values(d.query.pages).filter(x => x && !x.missing && typeof x.title === 'string') : [];
-const imgOk = u => typeof u === 'string' && /^https:\/\/upload\.wikimedia\.org\//.test(u);
+/* Wikipédia sert ses vignettes depuis thumb.wikimedia.org (ou upload.wikimedia.org) : on n'accepte que ces deux hôtes */
+const imgOk = u => typeof u === 'string' && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(u);
 const pageOf = x => ({
   title:x.title, desc:typeof x.description === 'string' ? x.description : '', text:typeof x.extract === 'string' ? x.extract.trim() : '',
   url: typeof x.fullurl === 'string' && /^https:\/\/fr\.wikipedia\.org\//.test(x.fullurl) ? x.fullurl : null,
