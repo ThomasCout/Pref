@@ -552,7 +552,6 @@ function viewDetail(id, back){
   const fab = el('fab'); fab.hidden = false; fab.dataset.id = id;
   fab.innerHTML = v ? FAB_EDIT : FAB_PLUS; fab.setAttribute('aria-label', v ? 'Modifier la fiche de visite' : 'Déclarer une visite ici');
   vw.innerHTML =
-    '<div class="phero" id="phero" data-id="' + esc(id) + '"><span class="big">' + esc(p.dept) + '</span></div>' +
     '<div class="dhead"><h2>' + esc(p.nom) + '</h2>' +
     '<p class="mut">' + typeLabel(p) + ' · ' + esc(p.deptNom) + ' (' + esc(p.dept) + ') · ' + esc(p.region) +
     (p.arrondissement ? '<br>Arrondissement de ' + esc(p.arrondissement) : '') + '</p></div>' +
@@ -881,11 +880,7 @@ function viewReglages(){
 /* ----- album : récap imagé et chronologique des visites ----- */
 function albumCtaHTML(){
   const n = count();
-  return '<button type="button" class="cta play" id="d-retro"' + (n ? '' : ' disabled') + '><span class="ic">' +
-    svg('<path d="M8 5.5v13a.8.8 0 0 0 1.2.7l10.5-6.5a.8.8 0 0 0 0-1.4L9.2 4.8A.8.8 0 0 0 8 5.5z" fill="currentColor"/>', 24) + '</span>' +
-    '<span style="flex:1;min-width:0"><b>Lancer la rétrospective</b><span class="mut">' +
-    (n ? 'Diaporama automatique de vos visites' : 'Disponible dès votre première visite') + '</span></span></button>' +
-    '<button type="button" class="cta" id="d-album"' + (n ? '' : ' disabled') + '><span class="ic">' +
+  return '<button type="button" class="cta" id="d-album"' + (n ? '' : ' disabled') + '><span class="ic">' +
     svg('<rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-8 8"/>', 24) + '</span>' +
     '<span style="flex:1;min-width:0"><b>Mon album</b><span class="mut">' +
     (n ? n + ' visite' + (n > 1 ? 's' : '') + ' en images, par ordre chronologique' : 'Disponible dès votre première visite') + '</span></span>' +
@@ -908,6 +903,9 @@ function viewAlbum(){
     '<div class="hero-g">' + n + ' lieu' + (n > 1 ? 'x' : '') + ' visité' + (n > 1 ? 's' : '') + '</div>' +
     '<p>' + (dates[0] === dates[n - 1] ? 'Le ' + longDate(dates[0]) : 'Du ' + longDate(dates[0]) + ' au ' + longDate(dates[n - 1])) + '</p>' +
     '<p style="margin-top:3px">' + depts + ' département' + (depts > 1 ? 's' : '') + ' · ' + photos + ' photo' + (photos > 1 ? 's' : '') + '</p></div></div>' +
+    '<button type="button" class="cta play" id="d-retro" style="margin:12px 0 0"><span class="ic">' +
+      svg('<path d="M8 5.5v13a.8.8 0 0 0 1.2.7l10.5-6.5a.8.8 0 0 0 0-1.4L9.2 4.8A.8.8 0 0 0 8 5.5z" fill="currentColor"/>', 24) + '</span>' +
+      '<span style="flex:1;min-width:0"><b>Lancer la rétrospective</b><span class="mut">Diaporama automatique de vos visites</span></span></button>' +
     '<div class="seg" role="group" aria-label="Ordre de l\'album">' +
       '<button type="button" data-o="asc" class="' + (asc ? 'on' : '') + '">Plus anciennes</button>' +
       '<button type="button" data-o="desc" class="' + (asc ? '' : 'on') + '">Plus récentes</button></div>';
@@ -925,6 +923,7 @@ function viewAlbum(){
   }
   v.innerHTML = h;
   v.onclick = e => {
+    if (e.target.closest('#d-retro')) { startRetro(); return; }
     const o = e.target.closest('.seg button'); if (o) { state.albumAsc = o.dataset.o === 'asc'; albumScroll = 0; viewAlbum(); return; }
     const b = e.target.closest('.alb'); if (b) { albumScroll = v.scrollTop; viewDetail(b.dataset.id, viewAlbum); }
   };
@@ -1105,13 +1104,14 @@ async function fillInfo(p){
   let c; try { c = await loadInfo(p); } catch(e){ c = {}; }
   const slot = alive(); if (!slot) return;          /* l'utilisateur est déjà parti ailleurs */
   slot.innerHTML = infoHTML(p, c);
-  const ph = el('phero'), ph0 = c.wiki && c.wiki.photo;
-  if (ph && ph.dataset.id === p.id && ph0) {
+  const ph0 = c.wiki && c.wiki.photo;
+  if (ph0) {                                        /* pas de photo : pas d'encart du tout */
     const img = document.createElement('img');
     img.alt = ph0.kind === 'prefecture' ? 'Hôtel de préfecture, ' + p.nom : 'Vue de ' + p.nom;
     img.onload = () => {
-      if (!ph.isConnected) return;
-      const big = ph.querySelector('.big'); if (big) big.remove();
+      if (!alive() || el('phero')) return;
+      const ph = document.createElement('div'); ph.className = 'phero'; ph.id = 'phero'; ph.dataset.id = p.id;
+      el('view').insertBefore(ph, el('view').firstChild);
       ph.appendChild(img);
       if (ph0.page) { const a = document.createElement('a'); a.className = 'cap'; a.href = ph0.page; a.target = '_blank'; a.rel = 'noopener';
         a.textContent = 'Photo : Wikipédia'; ph.appendChild(a); }
