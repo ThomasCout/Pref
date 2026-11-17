@@ -193,6 +193,55 @@ textarea.field{resize:none}
 .cta.play[disabled]{background:var(--chip);border-color:var(--line);color:var(--ink2)}
 .cta.play[disabled] .ic{background:#fff;color:var(--ink2)}
 .cta.play[disabled] .mut{color:var(--ink2)}
+/* écran « Flash » (caméra) et tampon de validation */
+#flash{position:absolute;inset:0;z-index:50;background:#05070C;color:#fff;display:flex;flex-direction:column;overflow:hidden}
+.fl-top{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 6px}
+.fl-btn{flex:0 0 auto;min-width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:22px;background:rgba(255,255,255,.14);color:#fff;font-weight:600;font-size:14px}
+.fl-btn.txt{padding:0 16px}
+.fl-t{flex:1;min-width:0;text-align:center}
+.fl-t b{display:block;font:700 17px 'Space Grotesk',sans-serif;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-t span{display:block;font-size:12px;color:#A9B3C6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fl-vf{position:relative;flex:1;min-height:0;margin:8px 14px;border-radius:26px;overflow:hidden;background:#0E1726}
+.fl-vf video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.fl-vf .cn{position:absolute;width:36px;height:36px;border:0 solid #fff;opacity:.9;pointer-events:none}
+.cn.tl{top:16px;left:16px;border-top-width:3px;border-left-width:3px;border-top-left-radius:10px}
+.cn.tr{top:16px;right:16px;border-top-width:3px;border-right-width:3px;border-top-right-radius:10px}
+.cn.bl{bottom:16px;left:16px;border-bottom-width:3px;border-left-width:3px;border-bottom-left-radius:10px}
+.cn.br{bottom:16px;right:16px;border-bottom-width:3px;border-right-width:3px;border-bottom-right-radius:10px}
+.fl-msg{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:28px;text-align:center;color:#C9D1E0;font-size:14px}
+.fl-msg[hidden]{display:none}
+.fl-msg b{font:700 18px 'Space Grotesk',sans-serif;color:#fff}
+.fl-white{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+.fl-white.go{animation:flshot .3s ease-out}
+@keyframes flshot{0%{opacity:.95}100%{opacity:0}}
+.fl-bar{display:flex;align-items:center;justify-content:space-around;padding:10px 24px 4px}
+.fl-side{width:52px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;cursor:pointer}
+.fl-side[hidden]{display:flex;visibility:hidden}
+.fl-shutter{width:80px;height:80px;border-radius:50%;border:4px solid #fff;background:radial-gradient(circle,#fff 0 63%,transparent 65%);transition:transform .1s}
+.fl-shutter:active{transform:scale(.92)}
+.fl-skip{background:none;border:0;align-self:center;margin:6px 0 calc(env(safe-area-inset-bottom,0px) + 14px);padding:10px 18px;color:#A9B3C6;font-size:15px;font-weight:500}
+#flash.rev{background:#0E1726}
+#flash .field{color:var(--ink)}
+#flash .field::placeholder{color:#7B859C}
+.fl-rb{flex:1;min-height:0;overflow-y:auto;padding:12px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.fl-card{margin:6px auto 4px;width:min(78%,300px);background:#fff;color:var(--ink);padding:10px 10px 12px;border-radius:12px;box-shadow:0 16px 36px rgba(0,0,0,.45)}
+.fl-card img{display:block;width:100%;max-height:40vh;object-fit:cover;border-radius:6px;background:#E6E9F0}
+.fl-card figcaption,.fl-card.nop{display:flex;flex-direction:column;gap:1px;margin-top:8px;text-align:center}
+.fl-card.nop{margin-top:6px;padding:26px 10px}
+.fl-card b{font:700 16px 'Space Grotesk',sans-serif}
+.fl-card span{font-size:13px;color:var(--ink2)}
+.fl-date{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#C9D1E0;font-size:14px}
+.fl-date input{padding:8px 10px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font-size:15px;color-scheme:dark}
+.fl-foot{padding:10px 18px calc(env(safe-area-inset-bottom,0px) + 16px)}
+/* tampon */
+.stampwrap{gap:4px}
+.st-box{position:relative;display:flex;justify-content:center;margin-bottom:12px}
+.st-ph{width:210px;height:210px;object-fit:cover;border-radius:16px;border:6px solid #fff;box-shadow:0 16px 36px rgba(14,23,38,.32);transform:rotate(-3deg)}
+.st-mark{position:absolute;top:50%;left:50%;margin:-26px 0 0 -78px;width:156px;padding:6px 0;text-align:center;font:700 30px 'Space Grotesk',sans-serif;letter-spacing:.12em;color:var(--danger);
+  border:4px solid var(--danger);border-radius:10px;background:rgba(255,255,255,.6);transform:rotate(-14deg);animation:stamp .45s .3s cubic-bezier(.2,.9,.3,1.1) both}
+.st-mark.flow{position:static;margin:0}
+@keyframes stamp{0%{opacity:0;transform:rotate(-14deg) scale(2.8)}60%{opacity:1;transform:rotate(-14deg) scale(.9)}100%{opacity:1;transform:rotate(-14deg) scale(1)}}
+@media (prefers-reduced-motion:reduce){.st-mark,.fl-white.go{animation:none}.st-mark{opacity:1}}
 /* amis */
 .dot{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--danger);color:#fff;font:700 11px/18px Inter,sans-serif;text-align:center;font-style:normal}
 .dot[hidden]{display:none}
@@ -279,7 +328,7 @@ button.rk:active{background:#F8F9FB}
 #modal{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;background:var(--bg)}
 #modal .mbody{flex:1;min-height:0;overflow-y:auto;padding:4px 20px 20px}
 #modal .mfoot{flex:none;padding:12px 20px calc(12px + var(--sab));background:#fff;border-top:1px solid var(--line)}
-#hit{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;background:rgba(243,244,247,.8);
+#hit{position:absolute;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(243,244,247,.8);
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .done{display:flex;flex-direction:column;align-items:center;gap:6px;animation:pop .35s cubic-bezier(.2,.9,.3,1.2) both}
 .done .ic{display:flex;align-items:center;justify-content:center;width:84px;height:84px;border-radius:50%;background:var(--accent);color:#fff}
@@ -465,7 +514,8 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
 });
 const FAB_PLUS = el('fab').innerHTML, FAB_EDIT = '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16z"/></svg>';
 /* le bouton rond sert deux fois : nouvelle visite (registre) ou déclarer / modifier le lieu affiché (fiche) */
-el('fab').onclick = () => openFiche(el('fab').dataset.id || null);
+const FAB_CAM = '<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.6-2h6.8L17 8h3v11H4z"/><circle cx="12" cy="13.5" r="3.4"/></svg>';
+el('fab').onclick = () => { const id = el('fab').dataset.id; if (id && !visits[id]) openFlash(id); else openFiche(id || null); };
 function resetFab(){ const f = el('fab'); delete f.dataset.id; f.innerHTML = FAB_PLUS; f.setAttribute('aria-label', 'Déclarer une visite'); }
 function syncNav(){
   document.querySelectorAll('nav button').forEach(x => {
@@ -576,7 +626,7 @@ function viewDetail(id, back){
   el('h-title').textContent = 'Fiche';
   const act = el('h-act'); act.hidden = false; act.innerHTML = I.back + '<span>Retour</span>'; act.onclick = back || (() => render());
   const fab = el('fab'); fab.hidden = false; fab.dataset.id = id;
-  fab.innerHTML = v ? FAB_EDIT : FAB_PLUS; fab.setAttribute('aria-label', v ? 'Modifier la fiche de visite' : 'Déclarer une visite ici');
+  fab.innerHTML = v ? FAB_EDIT : FAB_CAM; fab.setAttribute('aria-label', v ? 'Modifier la fiche de visite' : 'Déclarer une visite ici');
   vw.innerHTML =
     '<div class="dhead"><h2>' + esc(p.nom) + '</h2>' +
     '<p class="mut">' + typeLabel(p) + ' · ' + esc(p.deptNom) + ' (' + esc(p.dept) + ') · ' + esc(p.region) +
@@ -606,10 +656,11 @@ function removeVisit(id){
 
 /* ----- fiche de visite ----- */
 let draft = null;
-function openFiche(id){
+function openFiche(id, pre){
   const old = el('modal'); if (old) old.remove();
   const v = id && visits[id];
   draft = { id: id || null, date: v ? v.date : today(), note: v ? v.note : '', photo: v ? v.photo : null, q: id ? BY_ID[id].nom : '' };
+  if (pre) Object.assign(draft, pre);
   const m = document.createElement('div'); m.id = 'modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-label', 'Fiche de visite');
   m.innerHTML =
     '<header><div><div class="brand">Préfectures de France</div><h1>Fiche de visite</h1></div>' +
@@ -670,7 +721,7 @@ function syncFiche(){
   el('f-ok').textContent = v ? 'Mettre à jour la fiche' : 'Enregistrer la visite';
   el('f-ok').disabled = !(draft.id && draft.date);
 }
-function shrink(file){
+function shrink(file, done){
   if (!file) return;
   const img = new Image(), rd = new FileReader();
   rd.onerror = img.onerror = () => alert("Impossible de lire cette image.");
@@ -678,7 +729,8 @@ function shrink(file){
     const max = 1000, s = Math.min(1, max / Math.max(img.width, img.height));
     const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    draft.photo = c.toDataURL('image/jpeg', .7); if (el('modal')) syncFiche();
+    const url = c.toDataURL('image/jpeg', .7);
+    if (done) done(url); else { draft.photo = url; if (el('modal')) syncFiche(); }
   }; img.src = rd.result; };
   rd.readAsDataURL(file);
 }
@@ -698,14 +750,111 @@ function submit(){
   const after = gradeOf(count());
   if (navigator.vibrate) navigator.vibrate(35);
   const hit = document.createElement('div'); hit.id = 'hit';
-  hit.innerHTML = '<div class="done"><span class="ic">' + I.checkBig + '</span><b>Visite enregistrée</b><span class="s">' + longDate(date) + '</span></div>';
+  if (prev) hit.innerHTML = '<div class="done"><span class="ic">' + I.checkBig + '</span><b>Fiche mise à jour</b><span class="s">' + longDate(date) + '</span></div>';
+  else {
+    const left = (nextGrade(count()) || [0, '', count()])[2] - count(), nx = nextGrade(count()), ph = visits[id].photo;
+    if (navigator.vibrate) navigator.vibrate([30, 60, 45]);
+    hit.innerHTML = '<div class="done stampwrap"><div class="st-box">' + (ph ? '<img class="st-ph" src="' + ph + '" alt="">' : '') + '<div class="st-mark' + (ph ? '' : ' flow') + '">VISITÉ</div></div>' +
+      '<b>' + esc(BY_ID[id].nom) + '</b><span class="s">' + longDate(date) + '</span>' +
+      (nx ? '<span class="s">Plus que ' + left + ' avant ' + esc(nx[1]) + '</span>' : '') + '</div>';
+  }
   el('app').appendChild(hit);
   setTimeout(() => {
-    hit.remove(); const m = el('modal'); if (m) m.remove();
+    hit.remove(); const m = el('modal'); if (m) m.remove(); closeFlash();
     state.tab = 'registre'; state.pin = null; render();
     if (!before || (after && after[0] > before[0])) showPromo(after);
-  }, 850);
+  }, prev ? 850 : 1500);
 }
+/* ----- « Flash » : écran caméra pour déclarer une visite sur place ----- */
+let flash = null;
+const IC_GAL = '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5"/></svg>';
+const IC_FLIP = '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 0 0-14-5.3L4 9M4 4v5h5M4 12a8 8 0 0 0 14 5.3L20 15M20 20v-5h-5"/></svg>';
+const IC_X = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+function stopCam(){ if (flash && flash.stream) { flash.stream.getTracks().forEach(t => t.stop()); flash.stream = null; } }
+function closeFlash(){ stopCam(); const f = el('flash'); if (f) f.remove(); flash = null; }
+function openFlash(id){
+  closeFlash();
+  flash = { id, p:BY_ID[id], photo:null, note:'', date:today(), facing:'environment', stream:null, tok:0 };
+  const f = document.createElement('div'); f.id = 'flash'; f.setAttribute('role', 'dialog'); f.setAttribute('aria-label', 'Photo de la visite');
+  el('app').appendChild(f); flashCamera();
+}
+function flashTop(left){
+  const p = flash.p;
+  return '<div class="fl-top">' + left + '<div class="fl-t"><b>' + esc(p.nom) + '</b><span>' + typeLabel(p) + ' · ' + esc(p.deptNom) + '</span></div>' +
+    '<button type="button" class="fl-btn txt" id="fl-fiche">Fiche</button></div>';
+}
+function flashToForm(){
+  const pre = { photo:flash.photo, note:flash.note, date:flash.date }, id = flash.id; closeFlash(); openFiche(id, pre);
+}
+function flashCamera(){
+  const f = el('flash'); if (!f || !flash) return;
+  f.className = 'cam';
+  f.innerHTML = flashTop('<button type="button" class="fl-btn" id="fl-x" aria-label="Fermer">' + IC_X + '</button>') +
+    '<div class="fl-vf"><video id="fl-video" autoplay playsinline muted></video><i class="cn tl"></i><i class="cn tr"></i><i class="cn bl"></i><i class="cn br"></i>' +
+    '<div class="fl-msg" id="fl-msg" hidden></div><div class="fl-white" id="fl-white"></div></div>' +
+    '<div class="fl-bar"><label class="fl-side" aria-label="Choisir dans la galerie">' + IC_GAL + '<input id="fl-gal" type="file" accept="image/*" hidden></label>' +
+    '<button type="button" class="fl-shutter" id="fl-shot" aria-label="Prendre la photo"></button>' +
+    '<button type="button" class="fl-side" id="fl-flip" aria-label="Changer de caméra" hidden>' + IC_FLIP + '</button></div>' +
+    '<button type="button" class="fl-skip" id="fl-skip">Sans photo</button>';
+  el('fl-x').onclick = closeFlash; el('fl-fiche').onclick = flashToForm;
+  el('fl-skip').onclick = () => { flash.photo = null; flashReview(); };
+  el('fl-gal').onchange = e => shrink(e.target.files[0], url => { if (!flash) return; flash.photo = url; flashReview(); });
+  el('fl-flip').onclick = () => { flash.facing = flash.facing === 'environment' ? 'user' : 'environment'; startCam(); };
+  el('fl-shot').onclick = () => {
+    const v = el('fl-video'); if (!flash || !flash.stream || !v || !v.videoWidth) return;
+    const s = Math.min(1, 1000 / Math.max(v.videoWidth, v.videoHeight)), c = document.createElement('canvas');
+    c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    flash.photo = c.toDataURL('image/jpeg', .7);
+    const w = el('fl-white'); w.classList.remove('go'); void w.offsetWidth; w.classList.add('go');      /* l'éclair */
+    if (navigator.vibrate) navigator.vibrate(20);
+    stopCam(); setTimeout(flashReview, 280);
+  };
+  startCam();
+  if (navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) navigator.mediaDevices.enumerateDevices().then(d => {
+    const b = el('fl-flip'); if (b && d.filter(x => x.kind === 'videoinput').length > 1) b.hidden = false;
+  }).catch(() => {});
+}
+async function startCam(){
+  if (!flash) return;
+  const my = ++flash.tok; stopCam();
+  const msg = el('fl-msg'), vid = el('fl-video'); if (!msg || !vid) return;
+  const fail = t => {
+    msg.hidden = false;
+    msg.innerHTML = '<b>' + t + '</b><span>Vous pouvez quand même prendre la photo avec l\'appareil de votre téléphone, ou la choisir dans la galerie.</span>' +
+      '<label class="btn light" style="max-width:260px;margin-top:8px">Ouvrir l\'appareil photo<input id="fl-nat" type="file" accept="image/*" capture="environment" hidden></label>';
+    el('fl-nat').onchange = e => shrink(e.target.files[0], url => { if (!flash) return; flash.photo = url; flashReview(); });
+  };
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return fail('Caméra indisponible ici');
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:flash.facing }, width:{ ideal:1600 }, height:{ ideal:1600 } }, audio:false });
+    if (!flash || my !== flash.tok || !el('fl-video')) { st.getTracks().forEach(t => t.stop()); return; }
+    flash.stream = st; vid.srcObject = st; msg.hidden = true; vid.play().catch(() => {});
+  } catch (e) {
+    if (!flash || my !== flash.tok) return;
+    fail(e && e.name === 'NotAllowedError' ? 'Accès à la caméra refusé' : 'Caméra indisponible');
+  }
+}
+function flashReview(){
+  const f = el('flash'); if (!f || !flash) return; stopCam();
+  f.className = 'rev';
+  const p = flash.p;
+  f.innerHTML = flashTop('<button type="button" class="fl-btn txt" id="fl-back">‹ ' + (flash.photo ? 'Reprendre' : 'Photo') + '</button>') +
+    '<div class="fl-rb">' +
+    (flash.photo ? '<figure class="fl-card"><img src="' + flash.photo + '" alt="Aperçu de la photo"><figcaption><b>' + esc(p.nom) + '</b><span id="fl-cap">' + longDate(flash.date) + '</span></figcaption></figure>'
+                 : '<div class="fl-card nop"><b>' + esc(p.nom) + '</b><span id="fl-cap">' + longDate(flash.date) + '</span><span>Sans photo</span></div>') +
+    '<textarea class="field" id="fl-note" rows="3" maxlength="500" aria-label="Observations" placeholder="Une note ? (facultatif)">' + esc(flash.note) + '</textarea>' +
+    '<label class="fl-date"><span>Date de la visite</span><input type="date" id="fl-date" value="' + flash.date + '" max="' + today() + '"></label></div>' +
+    '<div class="fl-foot"><button type="button" class="btn" id="fl-ok">Valider la visite</button></div>';
+  el('fl-back').onclick = flashCamera; el('fl-fiche').onclick = flashToForm;
+  el('fl-note').oninput = e => { flash.note = e.target.value; };
+  el('fl-date').onchange = e => { if (!e.target.value) return; flash.date = e.target.value; el('fl-cap').textContent = longDate(flash.date); };
+  el('fl-ok').onclick = () => { draft = { id:flash.id, date:flash.date, note:flash.note, photo:flash.photo, q:p.nom }; submit(); };
+}
+document.addEventListener('visibilitychange', () => {            /* la caméra ne reste jamais allumée en arrière-plan */
+  if (!flash) return;
+  if (document.hidden) stopCam(); else if (el('fl-video')) startCam();
+});
 function showPromo(g){
   if (!g) return;
   const d = document.createElement('div'); d.id = 'promo'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-label', 'Promotion');
