@@ -335,3 +335,4 @@ button.rk:active{background:#F8F9FB}
 #promo .ic{display:flex;align-items:center;justify-content:center;width:84px;height:84px;border-radius:50%;background:var(--light);color:var(--navy);
   animation:pop .4s cubic-bezier(.2,.9,.3,1.2) both}
 @media (prefers-reduced-motion:reduce){.done,#promo .ic{animation:none}}
+#root{display:contents}
