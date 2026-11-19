@@ -32,7 +32,7 @@ export function Registre() {
         <Btn id="e-add" onClick={() => openForm(null)}>Déclarer une première visite</Btn></Panel>}
       <label className="search"><IcSearch />
         <Input id="q" type="search" aria-label="Rechercher une commune ou un département" placeholder="Rechercher une commune, un département"
-          autoComplete="off" value={ui.q} onChange={e => setUi({ q: e.target.value })} className="border-0 bg-transparent shadow-none" /></label>
+          autoComplete="off" value={ui.q} onChange={e => setUi({ q: e.target.value })} className="flex-1 min-w-0 border-0 bg-transparent px-0 shadow-none h-auto text-[14px]" /></label>
       <div className="seg" role="group" aria-label="Filtrer">
         {([['all', 'Toutes'], ['seen', 'Vues'], ['todo', 'Restantes']] as const).map(x =>
           <button key={x[0]} type="button" data-f={x[0]} className={ui.filter === x[0] ? 'on' : ''} onClick={() => setUi({ filter: x[0] })}>{x[1]}</button>)}

@@ -336,3 +336,9 @@ button.rk:active{background:#F8F9FB}
   animation:pop .4s cubic-bezier(.2,.9,.3,1.2) both}
 @media (prefers-reduced-motion:reduce){.done,#promo .ic{animation:none}}
 #root{display:contents}
+.row{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+.vstack>*+*{margin-top:8px}
+.panel{margin-top:12px}
+.sec+.panel,.kpis+.panel{margin-top:0}
+.am-row{display:flex;gap:8px;margin-top:12px}
+.am-row>*{flex:1;margin:0!important}
