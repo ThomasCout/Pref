@@ -40,7 +40,7 @@ export function Album({ scrollRef }: { scrollRef: React.MutableRefObject<number>
               <div className={'alb-ph' + (vis.photo ? '' : ' none')}>
                 {vis.photo ? <img loading="lazy" decoding="async" src={vis.photo} alt={'Photo de la visite : ' + p.nom} /> : <span className="alb-ph0">{p.dept}</span>}
               </div>
-              <div className="alb-b"><div className="alb-h"><h3>{p.nom}</h3><span className="chip on"><IcCheck />{shortDate(vis.date)}</span></div>
+              <div className="alb-b"><div className="alb-h"><h3>{p.nom}</h3><span className="achip on"><IcCheck />{shortDate(vis.date)}</span></div>
                 <p className="mut">{typeLabel(p)} · {p.deptNom}</p>
                 {vis.note && <p className="alb-n">{vis.note}</p>}</div>
             </button>
