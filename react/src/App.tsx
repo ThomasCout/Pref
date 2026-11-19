@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ACC_LIGHT, BY_ID, TOTAL, gradeOf, nextGrade, type Grade } from './lib/data';
-import { count, getVisits, saveVisit, useStore, SETTINGS_EVENT } from './lib/store';
+import { count, getVisits, saveVisit, session, useStore, SETTINGS_EVENT } from './lib/store';
 import { fr, longDate, today } from './lib/util';
 import { NavCtx, type Draft, type Nav, type Route, type Tab, type Ui } from './lib/nav';
 import { Ring } from './components/Ring';
@@ -35,8 +35,8 @@ export default function App() {
   const [retro, setRetro] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const view = useRef<HTMLDivElement>(null), albumScroll = useRef(0);
-  const badge = useFriendBadge();
   const top = stack[stack.length - 1] as Route | undefined;
+  const badge = useFriendBadge(tab + (session ? '1' : '0') + (top ? top.k : ''));
 
   const setUi = useCallback((p: Partial<Ui>) => setUiState(o => ({ ...o, ...p })), []);
   const setTab = useCallback((t: Tab) => { setTabState(t); setStack([]); if (t !== 'carte') setUi({ pin: null }); setOpened(true); }, [setUi]);

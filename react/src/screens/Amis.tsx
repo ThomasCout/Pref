@@ -13,14 +13,14 @@ import { Btn, Empty, Field, Panel } from '../components/ui';
 let badge = 0;
 const badgeSubs = new Set<(n: number) => void>();
 const setBadge = (n: number) => { badge = n; badgeSubs.forEach(f => f(n)); };
-export function useFriendBadge() {
+export function useFriendBadge(key: string) {
   const [n, setN] = useState(badge);
   useEffect(() => {
     badgeSubs.add(setN);
     if (sb && session) rpc<Req[]>('friend_requests').then(r => setBadge(r.filter(x => x.direction === 'in').length)).catch(() => {});
     else setBadge(0);
     return () => { badgeSubs.delete(setN); };
-  }, []);
+  }, [key]);
   return n;
 }
 
