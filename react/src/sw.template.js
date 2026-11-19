@@ -27,11 +27,11 @@ async function networkFirst(req) {
     if (r && r.ok) c.put(req, r.clone());
     return r;
   } catch (err) {
-    return (await c.match(req, { ignoreSearch: true })) || (await c.match('index.html')) || Response.error();
+    return (await c.match(req, { ignoreSearch: true, ignoreVary: true })) || (await c.match('index.html')) || Response.error();
   }
 }
 async function cacheFirst(req) {
-  const c = await caches.open(CACHE), hit = await c.match(req);
+  const c = await caches.open(CACHE), hit = await c.match(req, { ignoreVary: true });
   if (hit) return hit;
   const r = await fetch(req); if (r && r.ok) c.put(req, r.clone()); return r;
 }
