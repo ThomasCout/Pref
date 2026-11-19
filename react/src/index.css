@@ -1,0 +1,5 @@
+@layer theme, base, app, components, utilities;
+@import "tailwindcss";
+@import "@heroui/styles";
+@import "leaflet/dist/leaflet.css" layer(app);
+@import "./app.css" layer(app);
