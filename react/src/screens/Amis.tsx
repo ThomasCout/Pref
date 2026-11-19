@@ -114,8 +114,8 @@ function Drawn({ prof, over: over0, reqs, flash, setFlash, reloadWith, open }:
           <Btn kind="alt" id="am-rename" onClick={() => { void rename(); }}>Pseudo</Btn></div></Panel>
       {inc.length > 0 && <><Sec a="Demandes reçues" b={String(inc.length)} /><Panel>
         {inc.map(r => <div className="line am-req" key={r.id}><b>{r.pseudo}</b><span className="am-btns">
-          <button type="button" className="chip on am-yes" onClick={() => { void respond(r.id, true); }}>Accepter</button>
-          <button type="button" className="chip am-no" onClick={() => { void respond(r.id, false); }}>Refuser</button></span></div>)}</Panel></>}
+          <button type="button" className="achip on am-yes" onClick={() => { void respond(r.id, true); }}>Accepter</button>
+          <button type="button" className="achip am-no" onClick={() => { void respond(r.id, false); }}>Refuser</button></span></div>)}</Panel></>}
       <Sec a="Classement" b={'sur ' + TOTAL + ' lieux'} />
       {over.map((x, i) => {
         const g = gradeOf(x.n);
@@ -135,7 +135,7 @@ function Drawn({ prof, over: over0, reqs, flash, setFlash, reloadWith, open }:
         <p className="mut" id="am-msg" style={{ marginTop: 8 }}>{msg}</p></form></Panel>
       {out.length > 0 && <><Sec a="Demandes envoyées" b={String(out.length)} /><Panel>
         {out.map(r => <div className="line am-req" key={r.id}><span><b>{r.pseudo}</b> <span className="mut">· en attente</span></span>
-          <button type="button" className="chip am-cancel" onClick={() => { void cancel(r.user_id); }}>Annuler</button></div>)}</Panel></>}
+          <button type="button" className="achip am-cancel" onClick={() => { void cancel(r.user_id); }}>Annuler</button></div>)}</Panel></>}
     </>
   );
 }
@@ -202,7 +202,7 @@ export function Ami({ uid }: { uid: string }) {
       {fv.map(x => (
         <div className="alb am-vis" key={x.p.id} data-id={x.p.id}>
           <FriendPhoto uid={uid} placeId={x.p.id} hasPhoto={x.photo} dept={x.p.dept} alt={'Photo de ' + who.pseudo + ' : ' + x.p.nom} />
-          <div className="alb-b"><div className="alb-h"><h3>{x.p.nom}</h3><span className="chip on"><IcCheck />{shortDate(x.date)}</span></div>
+          <div className="alb-b"><div className="alb-h"><h3>{x.p.nom}</h3><span className="achip on"><IcCheck />{shortDate(x.date)}</span></div>
             <p className="mut">{typeLabel(x.p)} · {x.p.deptNom}</p>
             {x.note && <p className="alb-n" style={{ WebkitLineClamp: 'unset' }}>{x.note}</p>}</div>
         </div>))}
