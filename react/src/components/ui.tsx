@@ -27,7 +27,7 @@ export function FileBtn({ kind = 'alt', accept = 'image/*', capture, onFile, chi
     </>
   );
 }
-export const Field = (p: ComponentProps<typeof Input>) => <Input fullWidth {...p} className={`h-12 rounded-[14px] text-[15px] px-3.5 ${p.className || ''}`} />;
+export const Field = (p: ComponentProps<typeof Input>) => <Input fullWidth {...p} className={`h-12 rounded-[14px] text-base px-3.5 ${p.className || ''}`} />;
 export const Note = (p: ComponentProps<typeof TextArea>) => <TextArea fullWidth {...p} className={`rounded-[14px] text-base ${p.className || ''}`} />;
 /* Carte HeroUI */
 export function Panel({ children, className = '', style }: { children: ReactNode; className?: string; style?: React.CSSProperties }) {

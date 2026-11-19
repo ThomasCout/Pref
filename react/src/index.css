@@ -3,3 +3,6 @@
 @import "@heroui/styles";
 @import "leaflet/dist/leaflet.css" layer(app);
 @import "./app.css" layer(app);
+
+/* iPhone : un champ de saisie sous 16 px déclenche un zoom de la page au focus. Règle hors couche = prioritaire. */
+input, textarea, select { font-size: 16px; }
